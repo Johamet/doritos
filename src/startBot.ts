@@ -1,11 +1,10 @@
 import * as baileys from "baileys";
 import hapi from "@hapi/boom";
-import env from "./env";
+import env from "./env.js";
 import path from "node:path";
 import pino from "pino";
 import os from "node:os";
 import process from "node:process";
-import bun from "bun";
 
 export default async function () {
   const auth = await baileys.useMultiFileAuthState(path.resolve(env.AUTH_DIR));
@@ -85,7 +84,7 @@ Bot name: \`${sock.user?.name}\`
 Chat Id: \`${chat}\`
 Sender Id: \`${sender}\`
 
-Runtime: \`Bun v${bun.version}\`
+Runtime: \`NodeJS v${process.version}\`
 Uptime: \`${process.uptime().toFixed(2)}s\`
 RAM total: \`${os.totalmem() / 1024 / 1024 / 1024} gb\`
 RAM usage: \`${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} mb\`

@@ -1,5 +1,5 @@
-import env from "./env";
-import startBot from "./startBot";
+import env from "./env.js";
+import startBot from "./startBot.js";
 import cluster from "node:cluster";
 
 if (cluster.isPrimary === true) {

@@ -1,16 +1,15 @@
 {
   "name": "doritos",
-  "module": "src/index.ts",
+  "module": "out/index.js",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts"
+    "dev": "node --watch src/index.ts",
+    "start": "npm run build && node out/index.js",
+    "build": "tsc"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/node": "24",
     "typescript": "6"
   },
   "dependencies": {
