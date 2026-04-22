@@ -32,4 +32,4 @@ BOT_PN="XXXXXXXXX"
 BOT_PREFIX="!"
 ```
 
-Developed by Jose Daniel [jzszdznzzl](https://github.com/jzszdznzzl)
+Developed by Jose kbroniel [jzszdznzzl](https://github.com/jzszdznzzl)
