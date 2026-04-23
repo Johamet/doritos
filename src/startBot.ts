@@ -1,4 +1,4 @@
-import * as baileys from "baileys";
+import * as baileys from "@whiskeysockets/baileys";
 import hapi from "@hapi/boom";
 import env from "./env.js";
 import path from "node:path";
@@ -9,6 +9,7 @@ import process from "node:process";
 export default async function () {
   const auth = await baileys.useMultiFileAuthState(path.resolve(env.AUTH_DIR));
   const wa = await baileys.fetchLatestWaWebVersion();
+  
   const sock = baileys.makeWASocket({
     auth: auth.state,
     version: wa.version,
@@ -29,10 +30,7 @@ export default async function () {
     }
     if (update.connection === "open") {
       console.log(`[${env.BOT_PN}] opened`);
-      console.dir(sock.user);
     } else if (update.connection === "close") {
-      console.log(`[${env.BOT_PN}] closed`);
-      console.dir(update.lastDisconnect);
       const code = new hapi.Boom(update.lastDisconnect?.error).output.statusCode;
       if (code !== baileys.DisconnectReason.loggedOut) {
         process.exit(0);
@@ -43,19 +41,14 @@ export default async function () {
   });
 
   sock.ev.on("messages.upsert", async function (upsert) {
-    if (upsert.type !== "notify") {
-      return;
-    }
+    if (upsert.type !== "notify") return;
 
     for (const msg of upsert.messages) {
-      if (typeof msg.key.remoteJid !== "string") {
-        continue;
-      }
+      if (typeof msg.key.remoteJid !== "string") continue;
 
       const chat = msg.key.remoteJid;
-      const sender = msg.key.fromMe
-        ? baileys.jidNormalizedUser(sock.user?.id || "")
-        : (msg.key.participant ?? msg.key.remoteJid);
+      const botJid = baileys.jidNormalizedUser(sock.user?.id || "");
+      const sender = baileys.jidNormalizedUser(msg.key.participant ?? msg.key.remoteJid ?? "");
 
       const body =
         msg.message?.conversation ??
@@ -67,11 +60,9 @@ export default async function () {
         msg.message?.viewOnceMessage?.message?.videoMessage?.caption ??
         msg.message?.viewOnceMessageV2?.message?.videoMessage?.caption;
 
-      if (body?.startsWith(env.BOT_PREFIX) !== true) {
-        continue;
-      }
+      if (body?.startsWith(env.BOT_PREFIX) !== true) continue;
 
-      const [cmd, ...args] = body.substring(env.BOT_PREFIX.length).split(/\s+/);
+      const [cmd, ...args] = body.substring(env.BOT_PREFIX.length).trim().split(/\s+/);
 
       switch (cmd?.toLowerCase()) {
         case "ping": {
@@ -115,42 +106,53 @@ CWD: \`${process.cwd()}\`
 
           const groupMetadata = await sock.groupMetadata(chat);
           const participants = groupMetadata.participants;
-          const botJid = baileys.jidNormalizedUser(sock.user?.id || "");
-          const botParticipant = participants.find(p => p.id === botJid);
-          const senderParticipant = participants.find(p => p.id === sender);
+
+          const botParticipant = participants.find(p => baileys.jidNormalizedUser(p.id) === botJid);
+          const senderParticipant = participants.find(p => baileys.jidNormalizedUser(p.id) === sender);
 
           if (!botParticipant?.admin) {
             await sock.sendMessage(chat, { text: "Necesito ser admin para expulsar" }, { quoted: msg });
             break;
           }
           if (!senderParticipant?.admin) {
-            await sock.sendMessage(chat, { text: "Solo admins pueden usar!kick" }, { quoted: msg });
+            await sock.sendMessage(chat, { text: "Solo admins pueden usar este comando" }, { quoted: msg });
             break;
           }
 
-          const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
+          if (quoted) mentioned.push(quoted);
+
+          mentioned = [...new Set(mentioned)].map(v => baileys.jidNormalizedUser(v));
+
           if (mentioned.length === 0) {
-            await sock.sendMessage(chat, { text: `Uso: ${env.BOT_PREFIX}kick @usuario razón` }, { quoted: msg });
+            await sock.sendMessage(chat, { text: `Uso: ${env.BOT_PREFIX}kick @usuario o responde a su mensaje` }, { quoted: msg });
             break;
           }
 
-          const razon = args.slice(mentioned.length).join(" ") || "Sin razón especificada";
+          const razon = args.filter(a => !a.startsWith('@')).join(" ") || "Sin razón especificada";
 
-          for (const user of mentioned) {
-            const target = participants.find(p => p.id === user);
+          for (const userJid of mentioned) {
+            if (userJid === botJid) continue;
+
+            const target = participants.find(p => baileys.jidNormalizedUser(p.id) === userJid);
             if (target?.admin) {
               await sock.sendMessage(chat, {
-                text: `No puedo expulsar a @${user.split("@")[0]} porque es admin`,
-                mentions: [user]
+                text: `No puedo expulsar a @${userJid.split("@")[0]} porque es admin`,
+                mentions: [userJid]
               }, { quoted: msg });
               continue;
             }
 
-            await sock.groupParticipantsUpdate(chat, [user], "remove");
-            await sock.sendMessage(chat, {
-              text: `@${user.split("@")[0]} expulsado por @${sender.split("@")[0]}\nRazón: ${razon}`,
-              mentions: [user, sender]
-            }, { quoted: msg });
+            try {
+              await sock.groupParticipantsUpdate(chat, [userJid], "remove");
+              await sock.sendMessage(chat, {
+                text: `@${userJid.split("@")[0]} expulsado por @${sender.split("@")[0]}\nRazón: ${razon}`,
+                mentions: [userJid, sender]
+              }, { quoted: msg });
+            } catch (e) {
+              console.error(e);
+            }
 
             await new Promise(r => setTimeout(r, 2000));
           }
@@ -163,4 +165,4 @@ CWD: \`${process.cwd()}\`
       }
     }
   });
-                                 }
+}
