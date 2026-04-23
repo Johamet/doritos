@@ -77,7 +77,10 @@ export default async function () {
         case "info": {
           const text = `
 - \`Info\`
-case "kick": {
+          break;
+        }
+
+case "ban": {
   if (!chat.endsWith("@g.us")) {
     await sock.sendMessage(chat, { text: "Este comando solo funciona en grupos" }, { quoted: msg });
     break;
@@ -94,7 +97,7 @@ case "kick": {
     break;
   }
   if (!senderParticipant?.admin) {
-    await sock.sendMessage(chat, { text: "Solo admins pueden usar!kick" }, { quoted: msg });
+    await sock.sendMessage(chat, { text: "Solo admins pueden usar!ban" }, { quoted: msg });
     break;
   }
 
@@ -126,6 +129,7 @@ case "kick": {
   }
   break;
 }
+
 Bot phone number: \`${sock.user?.id}\`
 Bot name: \`${sock.user?.name}\`
 
