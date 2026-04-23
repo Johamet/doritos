@@ -80,7 +80,7 @@ export default async function () {
           break;
         }
 
-case "ban": {
+        case "ban": {
   if (!chat.endsWith("@g.us")) {
     await sock.sendMessage(chat, { text: "Este comando solo funciona en grupos" }, { quoted: msg });
     break;
