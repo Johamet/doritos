@@ -139,7 +139,7 @@ CWD: \`${process.cwd()}\`
               continue;
             }
 
-            await sock.groupParticipantsUpdate(chat,, "remove");
+            await sock.groupParticipantsUpdate(chat, [user], "remove");
             await sock.sendMessage(chat, {
               text: `@${user.split("@")[0]} expulsado por @${sender.split("@")[0]}\nRazón: ${razon}`,
               mentions: [user, sender]
