@@ -76,8 +76,8 @@ export default async function () {
         }
         case "info": {
           const text = `
-- \`Info\` case
-
+- \`Info\`
+        case
 Bot phone number: \`${sock.user?.id}\`
 Bot name: \`${sock.user?.name}\`
 
