@@ -135,7 +135,7 @@ CWD: \`${process.cwd()}\`
               await sock.sendMessage(chat, {
                 text: `No puedo expulsar a @${user.split("@")[0]} porque es admin`,
                 mentions:
-              }, { quoted: msg });
+}, { quoted: msg });
               continue;
             }
 
