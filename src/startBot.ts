@@ -78,56 +78,6 @@ export default async function () {
           const text = `
 - \`Info\`
 
-case "ban": {
-  if (!chat.endsWith("@g.us")) {
-    await sock.sendMessage(chat, { text: "Este comando solo funciona en grupos" }, { quoted: msg });
-    break;
-  }
-
-  const groupMetadata = await sock.groupMetadata(chat);
-  const participants = groupMetadata.participants;
-  const botJid = baileys.jidNormalizedUser(sock.user.id);
-  const botParticipant = participants.find(p => p.id === botJid);
-  const senderParticipant = participants.find(p => p.id === sender);
-
-  if (!botParticipant?.admin) {
-    await sock.sendMessage(chat, { text: "Necesito ser admin para banear" }, { quoted: msg });
-    break;
-  }
-  if (!senderParticipant?.admin) {
-    await sock.sendMessage(chat, { text: "Solo admins pueden usar!ban" }, { quoted: msg });
-    break;
-  }
-
-  const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-  if (mentioned.length === 0) {
-    await sock.sendMessage(chat, { text: `Uso: ${env.BOT_PREFIX}ban @usuario razón` }, { quoted: msg });
-    break;
-  }
-
-  const razon = args.slice(1).join(" ") || "Sin razón especificada";
-
-  for (const user of mentioned) {
-    const target = participants.find(p => p.id === user);
-    if (target?.admin) {
-      await sock.sendMessage(chat, {
-        text: `No puedo banear a @${user.split("@")[0]} porque es admin`,
-        mentions: [user]
-      }, { quoted: msg });
-      continue;
-    }
-
-    await sock.groupParticipantsUpdate(chat, [user], "remove");
-    await sock.sendMessage(chat, {
-      text: `@${user.split("@")[0]} baneado por @${sender.split("@")[0]}\nRazón: ${razon}`,
-      mentions: [user, sender]
-    }, { quoted: msg });
-
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  break;
-}
-
 Bot phone number: \`${sock.user?.id}\`
 Bot name: \`${sock.user?.name}\`
 
