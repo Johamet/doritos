@@ -23,7 +23,7 @@ export default async function () {
   sock.ev.on("creds.update", auth.saveCreds);
 
   sock.ev.on("connection.update", async function (update) {
-    if (update.qr !== undefined) {
+    if (update.qr!== undefined) {
       const otp = await sock.requestPairingCode(env.BOT_PN);
       console.log(`[${env.BOT_PN}] otp: ${otp}`);
     }
@@ -34,7 +34,7 @@ export default async function () {
       console.log(`[${env.BOT_PN}] closed`);
       console.dir(update.lastDisconnect);
       const code = new hapi.Boom(update.lastDisconnect?.error).output.statusCode;
-      if (code !== baileys.DisconnectReason.loggedOut) {
+      if (code!== baileys.DisconnectReason.loggedOut) {
         process.exit(0);
       } else {
         process.exit(1);
@@ -43,35 +43,35 @@ export default async function () {
   });
 
   sock.ev.on("messages.upsert", async function (upsert) {
-    if (upsert.type !== "notify") {
+    if (upsert.type!== "notify") {
       return;
     }
 
     for (const msg of upsert.messages) {
-      if (typeof msg.key.remoteJid !== "string") {
+      if (typeof msg.key.remoteJid!== "string") {
         continue;
       }
 
       const chat = msg.key.remoteJid;
       const sender = msg.key.fromMe
-        ? baileys.jidNormalizedUser(sock.user?.id || "")
-        : (msg.key.participant ?? msg.key.remoteJid);
+       ? baileys.jidNormalizedUser(sock.user?.id || "")
+        : (msg.key.participant?? msg.key.remoteJid);
 
       const body =
-        msg.message?.conversation ??
-        msg.message?.extendedTextMessage?.text ??
-        msg.message?.imageMessage?.caption ??
-        msg.message?.viewOnceMessage?.message?.imageMessage?.caption ??
-        msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption ??
-        msg.message?.videoMessage?.caption ??
-        msg.message?.viewOnceMessage?.message?.videoMessage?.caption ??
+        msg.message?.conversation??
+        msg.message?.extendedTextMessage?.text??
+        msg.message?.imageMessage?.caption??
+        msg.message?.viewOnceMessage?.message?.imageMessage?.caption??
+        msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption??
+        msg.message?.videoMessage?.caption??
+        msg.message?.viewOnceMessage?.message?.videoMessage?.caption??
         msg.message?.viewOnceMessageV2?.message?.videoMessage?.caption;
 
-      if (body?.startsWith(env.BOT_PREFIX) !== true) {
+      if (body?.startsWith(env.BOT_PREFIX)!== true) {
         continue;
       }
 
-      const [cmd, ...args] = body.substring(env.BOT_PREFIX.length).split(/\s+/);
+      const [cmd,...args] = body.substring(env.BOT_PREFIX.length).split(/\s+/);
 
       switch (cmd?.toLowerCase()) {
         case "ping": {
@@ -97,7 +97,7 @@ Sender Id: \`${sender}\`
 
 Runtime: \`NodeJS v${process.version}\`
 Uptime: \`${process.uptime().toFixed(2)}s\`
-RAM total: \`${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} gb\`
+RAM total: \`${(os.totalmem() / 1024 / 1024).toFixed(2)} gb\`
 RAM usage: \`${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} mb\`
 CPU usage: \`${os.loadavg().map(v => v.toFixed(2)).join(", ")}\`
 
@@ -115,9 +115,14 @@ CWD: \`${process.cwd()}\`
 
           const groupMetadata = await sock.groupMetadata(chat);
           const participants = groupMetadata.participants;
-          const botJid = baileys.jidNormalizedUser(sock.user?.id || "");
-          const botParticipant = participants.find(p => p.id === botJid);
+
+          const botNumber = sock.user?.id.split(':')[0].split('@')[0];
+          const botParticipant = participants.find(p => p.id.startsWith(botNumber));
           const senderParticipant = participants.find(p => p.id === sender);
+
+          console.log("Bot Number:", botNumber);
+          console.log("Bot admin:", botParticipant?.admin);
+          console.log("Bot JID en grupo:", botParticipant?.id);
 
           if (!botParticipant?.admin) {
             await sock.sendMessage(chat, { text: "Necesito ser admin para expulsar" }, { quoted: msg });
@@ -138,6 +143,11 @@ CWD: \`${process.cwd()}\`
 
           for (const user of mentioned) {
             const target = participants.find(p => p.id === user);
+            if (!target) {
+              await sock.sendMessage(chat, { text: "Usuario no encontrado en el grupo" }, { quoted: msg });
+              continue;
+            }
+
             if (target?.admin) {
               await sock.sendMessage(chat, {
                 text: `No puedo expulsar a @${user.split("@")[0]} porque es admin`,
@@ -146,11 +156,19 @@ CWD: \`${process.cwd()}\`
               continue;
             }
 
-            await sock.groupParticipantsUpdate(chat, [user], "remove");
-            await sock.sendMessage(chat, {
-              text: `@${user.split("@")[0]} expulsado por @${sender.split("@")[0]}\nRazón: ${razon}`,
-              mentions: [user, sender]
-            }, { quoted: msg });
+            try {
+              await sock.groupParticipantsUpdate(chat, [user], "remove");
+              await sock.sendMessage(chat, {
+                text: `@${user.split("@")[0]} expulsado por @${sender.split("@")[0]}\nRazón: ${razon}`,
+                mentions: [user, sender]
+              }, { quoted: msg });
+            } catch (e) {
+              console.log("Error al expulsar:", e);
+              await sock.sendMessage(chat, {
+                text: `Error: ${e.message}`,
+                mentions: [user]
+              }, { quoted: msg });
+            }
 
             await new Promise(r => setTimeout(r, 2000));
           }
