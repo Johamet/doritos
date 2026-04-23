@@ -1,4 +1,4 @@
-import * as baileys from "@whiskeysockets/baileys";
+1import * as baileys from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import env from "./env.js";
 import path from "node:path";
@@ -72,17 +72,14 @@ export default async function startBot() {
           await sock.sendMessage(chat, { text: "Pong!" }, { quoted: msg });
           break;
 
-        case "echo":
-          await sock.sendMessage(chat, { text: args.join(" ") });
-          break;
-
         case "info": {
+          const load = os.loadavg();
           const infoText = `
 - *Info*
-Bot: ${sock.user?.name}
+Bot: ${sock.user?.name || "WhatsApp Bot"}
 RAM: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB
 Uptime: ${process.uptime().toFixed(0)}s
-CPU: ${os.loadavg()[0].toFixed(2)}`.trim();
+CPU: ${load[0] ? load[0].toFixed(2) : "0.00"}`.trim();
           await sock.sendMessage(chat, { text: infoText }, { quoted: msg });
           break;
         }
@@ -134,7 +131,7 @@ CPU: ${os.loadavg()[0].toFixed(2)}`.trim();
               await sock.groupParticipantsUpdate(chat, [userJid], "remove");
               await sock.sendMessage(chat, { text: `✅ @${userJid.split('@')[0]} expulsado.\nRazón: ${razon}`, mentions: [userJid] });
             } catch (e) {
-              console.error(e);
+              console.error("Error en kick:", e);
             }
             await new Promise(r => setTimeout(r, 1000));
           }
