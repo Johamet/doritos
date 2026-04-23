@@ -77,8 +77,7 @@ export default async function () {
         case "info": {
           const text = `
 - \`Info\`
-          break;
-        }
+
 case "ban": {
   if (!chat.endsWith("@g.us")) {
     await sock.sendMessage(chat, { text: "Este comando solo funciona en grupos" }, { quoted: msg });
