@@ -19,9 +19,11 @@ export default async function () {
       return jid === "status@broadcast";
     },
   });
+
   sock.ev.on("creds.update", auth.saveCreds);
+
   sock.ev.on("connection.update", async function (update) {
-    if (update.qr!== undefined) {
+    if (update.qr !== undefined) {
       const otp = await sock.requestPairingCode(env.BOT_PN);
       console.log(`[${env.BOT_PN}] otp: ${otp}`);
     }
@@ -32,48 +34,57 @@ export default async function () {
       console.log(`[${env.BOT_PN}] closed`);
       console.dir(update.lastDisconnect);
       const code = new hapi.Boom(update.lastDisconnect?.error).output.statusCode;
-      if (code!== baileys.DisconnectReason.loggedOut) {
+      if (code !== baileys.DisconnectReason.loggedOut) {
         process.exit(0);
       } else {
         process.exit(1);
       }
     }
   });
+
   sock.ev.on("messages.upsert", async function (upsert) {
-    if (upsert.type!== "notify") {
+    if (upsert.type !== "notify") {
       return;
     }
+
     for (const msg of upsert.messages) {
-      if (typeof msg.key.remoteJid!== "string") {
+      if (typeof msg.key.remoteJid !== "string") {
         continue;
       }
+
       const chat = msg.key.remoteJid;
       const sender = msg.key.fromMe
-      ? baileys.jidNormalizedUser(sock.user!.id)
-        : (msg.key.participant?? msg.key.remoteJid);
+        ? baileys.jidNormalizedUser(sock.user?.id || "")
+        : (msg.key.participant ?? msg.key.remoteJid);
+
       const body =
-        msg.message?.conversation??
-        msg.message?.extendedTextMessage?.text??
-        msg.message?.imageMessage?.caption??
-        msg.message?.viewOnceMessage?.message?.imageMessage?.caption??
-        msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption??
-        msg.message?.videoMessage?.caption??
-        msg.message?.viewOnceMessage?.message?.videoMessage?.caption??
+        msg.message?.conversation ??
+        msg.message?.extendedTextMessage?.text ??
+        msg.message?.imageMessage?.caption ??
+        msg.message?.viewOnceMessage?.message?.imageMessage?.caption ??
+        msg.message?.viewOnceMessageV2?.message?.imageMessage?.caption ??
+        msg.message?.videoMessage?.caption ??
+        msg.message?.viewOnceMessage?.message?.videoMessage?.caption ??
         msg.message?.viewOnceMessageV2?.message?.videoMessage?.caption;
-      if (body?.startsWith(env.BOT_PREFIX)!== true) {
+
+      if (body?.startsWith(env.BOT_PREFIX) !== true) {
         continue;
       }
-      const [cmd,...args] = body.substring(env.BOT_PREFIX.length).split(/\s+/);
+
+      const [cmd, ...args] = body.substring(env.BOT_PREFIX.length).split(/\s+/);
+
       switch (cmd?.toLowerCase()) {
         case "ping": {
           await sock.sendMessage(chat, { text: "Pong!" }, { quoted: msg });
           break;
         }
+
         case "echo": {
           const text = args.join(" ");
           await sock.sendMessage(chat, { text });
           break;
         }
+
         case "info": {
           const text = `
 - \`Info\`
@@ -86,20 +97,16 @@ Sender Id: \`${sender}\`
 
 Runtime: \`NodeJS v${process.version}\`
 Uptime: \`${process.uptime().toFixed(2)}s\`
-RAM total: \`${(os.totalmem() / 1024 / 1024).toFixed(2)} gb\`
+RAM total: \`${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} gb\`
 RAM usage: \`${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} mb\`
-CPU usage: \`${os
-          .loadavg()
-          .map(function (v) {
-              return v.toFixed(2);
-            })
-          .join(", ")}\`
+CPU usage: \`${os.loadavg().map(v => v.toFixed(2)).join(", ")}\`
 
 CWD: \`${process.cwd()}\`
           `.trim();
           await sock.sendMessage(chat, { text, mentions: [sender] }, { quoted: msg });
           break;
         }
+
         case "kick": {
           if (!chat.endsWith("@g.us")) {
             await sock.sendMessage(chat, { text: "Este comando solo funciona en grupos" }, { quoted: msg });
@@ -108,7 +115,7 @@ CWD: \`${process.cwd()}\`
 
           const groupMetadata = await sock.groupMetadata(chat);
           const participants = groupMetadata.participants;
-          const botJid = baileys.jidNormalizedUser(sock.user.id);
+          const botJid = baileys.jidNormalizedUser(sock.user?.id || "");
           const botParticipant = participants.find(p => p.id === botJid);
           const senderParticipant = participants.find(p => p.id === sender);
 
@@ -127,15 +134,15 @@ CWD: \`${process.cwd()}\`
             break;
           }
 
-          const razon = args.slice(1).join(" ") || "Sin razón especificada";
+          const razon = args.slice(mentioned.length).join(" ") || "Sin razón especificada";
 
           for (const user of mentioned) {
             const target = participants.find(p => p.id === user);
             if (target?.admin) {
               await sock.sendMessage(chat, {
                 text: `No puedo expulsar a @${user.split("@")[0]} porque es admin`,
-                mentions:
-}, { quoted: msg });
+                mentions: [user]
+              }, { quoted: msg });
               continue;
             }
 
@@ -149,10 +156,11 @@ CWD: \`${process.cwd()}\`
           }
           break;
         }
+
         default: {
           await sock.sendMessage(chat, { text: `Unknown command: \`${cmd}\`` }, { quoted: msg });
         }
       }
     }
   });
-            }
+                                 }
