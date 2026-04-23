@@ -30,7 +30,9 @@ export default async function () {
     }
     if (update.connection === "open") {
       console.log(`[${env.BOT_PN}] opened`);
+      console.dir(sock.user);
     } else if (update.connection === "close") {
+      console.log(`[${env.BOT_PN}] closed`);
       const code = new hapi.Boom(update.lastDisconnect?.error).output.statusCode;
       if (code !== baileys.DisconnectReason.loggedOut) {
         process.exit(0);
@@ -47,6 +49,8 @@ export default async function () {
       if (typeof msg.key.remoteJid !== "string") continue;
 
       const chat = msg.key.remoteJid;
+      
+      // Normalización de IDs para evitar el error de ":device" o menciones mal formateadas
       const botJid = baileys.jidNormalizedUser(sock.user?.id || "");
       const sender = baileys.jidNormalizedUser(msg.key.participant ?? msg.key.remoteJid ?? "");
 
@@ -107,6 +111,7 @@ CWD: \`${process.cwd()}\`
           const groupMetadata = await sock.groupMetadata(chat);
           const participants = groupMetadata.participants;
 
+          // Verificación de admins con JIDs normalizados
           const botParticipant = participants.find(p => baileys.jidNormalizedUser(p.id) === botJid);
           const senderParticipant = participants.find(p => baileys.jidNormalizedUser(p.id) === sender);
 
@@ -119,10 +124,12 @@ CWD: \`${process.cwd()}\`
             break;
           }
 
+          // Obtener JIDs de menciones o de respuesta (quoted)
           let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
           const quoted = msg.message?.extendedTextMessage?.contextInfo?.participant;
           if (quoted) mentioned.push(quoted);
 
+          // Limpiar la lista de usuarios a expulsar
           mentioned = [...new Set(mentioned)].map(v => baileys.jidNormalizedUser(v));
 
           if (mentioned.length === 0) {
@@ -165,4 +172,5 @@ CWD: \`${process.cwd()}\`
       }
     }
   });
-}
+      }
+          
